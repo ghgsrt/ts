@@ -1,0 +1,200 @@
+
+Everything has an ID field, must be unique, is required for Options and Interfaces,
+	and objects may instead set one of their keys as the ID meaning the value
+	associated with that key will be set as the ID.
+
+Options- effectively setting your own custom select options to use with interfaces
+		where the key is the option label and value is the option value.
+	Option Types:
+		String: defaults to empty string
+		Number: default values count up from 0. Assigning a number to any value
+			sets the count index to that number.
+			EX: V1: empty = 0, V2: 5, V3: empty = 6, etc.
+		Object: hmmm
+
+Interface- effectively setting your own custom interface where, when creating an
+		object, The obj key is readonly and the value is the options as
+		defined in the interface.
+		- You can map options to define Interface keys and types. Best practice
+			to create option sets with all the same types (might be required...),
+			but there will be an option to set types of mapped options individually.
+		- Can also override default values (hence best practice to use the same type
+			so you can set the same default for all options more easily). 
+		- By... default... the defaults are: str->'', num->0, obj->{},
+			obj w/ interface->{IKeys w/ defaults according to the prev 3}
+		- Can map as many as you want and add individual fields if you want.
+		- Recommended to extend interfaces for multiple mappings for easy reuse.
+		- No Repeat option:
+			- Pick any number of types (num, str, opts, maybe interfaces)
+			- If multiple properties have the same type and that type
+			  is defined in _norepeat, then those properties must have 
+			  unique values.
+		- Required option:
+			- Checkbox or something next to each field indicating if the 
+			  field can be undefined.
+			- Also can be included with _maps to set all fields
+		- Used With option:
+			- Gives priority recommendation when selecting interfaces for
+			  _implements.
+			- Might not bother with this...
+Object-
+		- Variant Of option:
+			- Select ONE existing object to act as its base.
+			- Implements the same interfaces.
+			- All values default to the base objects values.
+			- This is mostly for human purposes: visual (defining a direct relation
+			  between two objects), convenience (custom defaults separate
+			  from those defined in the interfaces directly), and 
+			  organization (grouping variants and their bases).
+
+Examples:
+
+	Options:
+		_id: STATS_OPTS
+		-------------------------
+		K: SPECIAL -> V: 'Special'
+		K: ATTACK  -> V: 'Attack'
+		K: DEFENSE -> V: 'Defense'
+	Options:
+		_id: STATS_OPTS_EXT
+		-------------------------
+		K: HP -> V: 'Health'
+
+	Options:
+		_id: TYPES_OPTS
+		_optType: number
+		-------------------------
+		K: POISON    (genV: 0)
+		K: ELECTRIC  (genV: 1)
+		K: STEEL     (genV: 2)
+
+	Interface:
+		_id: ISTATS
+		_maps: STATS_OPTS -> AS: number -> DEF: 10 
+		-------------------------
+		<-- Generated -->
+		K: Special -> T: number
+		K: Attack  -> T: number
+		K: Defense -> T: number
+		<--------------->
+		K: Speed   -> T: number
+	Interface:
+		_id: ISTATS_EXT
+		_extends: ISTATS
+		_maps: STATS_OPTS_EXT -> AS: number -> DEF: 50
+		-------------------------
+		<-- Generated -->
+		K: Special -> T: number
+		K: Attack  -> T: number
+		K: Defense -> T: number
+		K: Speed   -> T: number
+		K: Health  -> T: number
+		<--------------->
+
+	Interface:
+		_id: ITYPE
+		_norepeat: TYPES_OPTS
+		-------------------------
+		K: Type1 -> T: TYPES_OPTS
+		K: Type2 -> T: TYPES_OPTS ->  R: false
+
+	Interface:
+		_id: IMONSTER
+		-------------------------
+		K: Name  -> T: string
+		K: Stats -> T: ISTATS_EXT
+	Interface:
+		_id: IMONSTER_GEN1
+		_extends: IMONSTER
+		-------------------------
+		<-- Generated -->
+		K: Name  -> T: string
+		K: Stats -> T: ISTATS_EXT
+		<--------------->
+		K: Level -> T: number
+	Interface:
+		_id: IMONSTER_GEN2
+		_extends: IMONSTER_GEN1
+		-------------------------
+		<-- Generated -->
+		K: Name  -> T: string
+		K: Stats -> T: ISTATS_EXT
+		K: Level -> T: number
+		<--------------->
+		K: Type  -> T: TYPES_OPTS
+	Interface:
+		_id: IMONSTER_GEN3
+		_extends: IMONSTER_GEN1
+		-------------------------
+		<-- Generated -->
+		K: Name  -> T: string
+		K: Stats -> T: ISTATS_EXT
+		K: Level -> T: number
+		<--------------->
+		K: Type  -> T: ITYPE
+
+	Interface:
+		_id: IMONSTER_BOSS
+		_usedWith: IMONSTER
+		-------------------------
+		K: Title -> T: string
+
+	Object:
+		_id: STL_ELC
+		_implements: ITYPE
+		-------------------------
+		<-- Gen Keys -->
+		K: Type1 -> STEEL (2)
+		K: Type2 -> ELECTRIC (1)
+		<-------------->
+
+	Object:
+		_id: (key: Name)
+		_implements: IMONSTER_GEN2
+		-------------------------
+		<-- Gen Keys -->
+		K: Name  -> V: Squirtle
+		K: Stats -> V: _DEFAULT
+		K: Level -> V: 5
+		K: Type  -> V: POISON (0)
+		<--------------->
+
+	Object:
+		_id: (key: Name)
+		_implements: IMONSTER_GEN3
+		-------------------------
+		<-- Gen Keys -->
+		K: Name  -> V: Squirtle
+		K: Stats -> V:  Special: 10 (default)
+				Attack: 10 (default)
+				Defense: 10 (default)
+				Speed: 12
+				Health: 76
+		K: Level -> V: 5
+		K: Type  -> V: STL_ELC (see above)
+		<--------------->
+	
+	Object:
+		_id: (key: Name)
+		_implements: IMONSTER_GEN3
+		-------------------------
+		<-- Gen Keys -->
+		K: Name  -> V: Bulby
+		K: Stats -> V: {...} (default)
+		K: Level -> V: 10
+		K: Type  -> V:  Type1: STEEL (2)
+				Type2: empty (undefined)
+		<--------------->
+
+	Object:
+		_id: (key: Name)
+		_variantOf: Bulby
+		_implements: IMONSTER_BOSS
+		-------------------------
+		<-- Gen Keys -->
+		K: Name  -> V: Bulby
+		K: Stats -> V: (default)
+		K: Level -> V: 100
+		K: Type  -> V: (default)
+		K: Title -> V: Supreme Leader
+		<--------------->
